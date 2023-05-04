@@ -288,7 +288,9 @@ It's important to know that the naive variance estimates of the coefficients are
                     StatisticalWarning,
                 )
             if (W <= 0).any():
-                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+                raise ValueError(
+                    f"values in weight column {self.weights_col} must be positive."
+                )
 
         self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_intercept=self.fit_intercept)
         X = self.regressors.transform_df(df)["beta_"]
@@ -323,9 +325,9 @@ It's important to know that the naive variance estimates of the coefficients are
         X = X.astype(float)
 
         timeline = self._index
-        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X.T), index=timeline, columns=cols)
-
-        return individual_cumulative_hazards_
+        return pd.DataFrame(
+            np.dot(self.cumulative_hazards_, X.T), index=timeline, columns=cols
+        )
 
     def _check_values(self, X, T, E):
         check_for_numeric_dtypes_or_raise(X)
@@ -442,11 +444,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         subset_df = create_df_slicer(loc, iloc)
 
-        if not columns:
-            columns = self.cumulative_hazards_.columns
-        else:
-            columns = _to_list(columns)
-
+        columns = _to_list(columns) if columns else self.cumulative_hazards_.columns
         if ax is None:
             ax = plt.gca()
 
@@ -542,13 +540,11 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         justify = string_rjustify(25)
 
-        headers = []
-        headers.append(("duration col", "'%s'" % self.duration_col))
-
+        headers = [("duration col", f"'{self.duration_col}'")]
         if self.event_col:
-            headers.append(("event col", "'%s'" % self.event_col))
+            headers.append(("event col", f"'{self.event_col}'"))
         if self.weights_col:
-            headers.append(("weights col", "'%s'" % self.weights_col))
+            headers.append(("weights col", f"'{self.weights_col}'"))
         if self.coef_penalizer > 0:
             headers.append(("coef penalizer", self.coef_penalizer))
         if self.smoothing_penalizer > 0:

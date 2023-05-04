@@ -126,7 +126,7 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
     q = _to_1d_array(q)
     q = pd.Series(q.reshape(q.size), dtype=float)
 
-    if not ((q <= 1).all() and (0 <= q).all()):
+    if not ((q <= 1).all() and (q >= 0).all()):
         raise ValueError("q must be between 0 and 1")
 
     survival_functions = pd.DataFrame(survival_functions)
@@ -181,8 +181,7 @@ def qth_survival_time(q: float, model_or_survival_function) -> float:
         return model_or_survival_function.index[(-model_or_survival_function).searchsorted([-q])[0]]
     else:
         raise ValueError(
-            "Unable to compute median of object %s - should be a DataFrame, Series or lifelines univariate model"
-            % model_or_survival_function
+            f"Unable to compute median of object {model_or_survival_function} - should be a DataFrame, Series or lifelines univariate model"
         )
 
 
@@ -203,7 +202,9 @@ def median_survival_times(model_or_survival_function) -> float:
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         return model_or_survival_function.median_survival_time_
     else:
-        raise ValueError("Can't compute median survival time of object %s" % model_or_survival_function)
+        raise ValueError(
+            f"Can't compute median survival time of object {model_or_survival_function}"
+        )
 
 
 def restricted_mean_survival_time(
@@ -271,16 +272,14 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         # lifelines model
         model = model_or_survival_function
-        # if KM, we can compute exactly
-        if isinstance(model, lifelines.KaplanMeierFitter):
-            sf = model.survival_function_.loc[:t]
-            sf = sf.append(pd.DataFrame([model.predict(t)], index=[t], columns=sf.columns)).sort_index()
-            sf = sf.reset_index()
-            return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
-        else:
+        if not isinstance(model, lifelines.KaplanMeierFitter):
             return quad(model.predict, 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
+        sf = model.survival_function_.loc[:t]
+        sf = sf.append(pd.DataFrame([model.predict(t)], index=[t], columns=sf.columns)).sort_index()
+        sf = sf.reset_index()
+        return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
     else:
-        raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
+        raise ValueError(f"Can't compute RMST of object {model_or_survival_function}")
 
 
 def _expected_value_of_survival_squared_up_to_t(
@@ -320,7 +319,9 @@ def _expected_value_of_survival_squared_up_to_t(
         model = model_or_survival_function
         return 2 * quad(lambda tau: (tau * model.predict(tau)), 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
     else:
-        raise ValueError("Can't compute value for object %s" % model_or_survival_function)
+        raise ValueError(
+            f"Can't compute value for object {model_or_survival_function}"
+        )
 
 
 def group_survival_table_from_events(
@@ -629,9 +630,7 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
     return np.asarray(T_), np.asarray(E_), np.asarray(W_)
 
 
-def datetimes_to_durations(
-    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None, format=None
-):
+def datetimes_to_durations(start_times, end_times, fill_date=datetime.now(), freq="D", dayfirst=False, na_values=None, format=None):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
@@ -676,7 +675,7 @@ def datetimes_to_durations(
 
     """
     fill_date_ = pd.Series(fill_date).squeeze()
-    freq_string = "timedelta64[%s]" % freq
+    freq_string = f"timedelta64[{freq}]"
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
@@ -696,10 +695,7 @@ def datetimes_to_durations(
 
 
 def coalesce(*args) -> Any:
-    for arg in args:
-        if arg is not None:
-            return arg
-    return None
+    return next((arg for arg in args if arg is not None), None)
 
 
 def inv_normal_cdf(p) -> float:
@@ -708,7 +704,7 @@ def inv_normal_cdf(p) -> float:
 
 def k_fold_cross_validation(
     fitters, df, duration_col, event_col=None, k=5, scoring_method="log_likelihood", fitter_kwargs={}, seed=None
-):  # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals
+):    # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
@@ -785,9 +781,7 @@ def k_fold_cross_validation(
             scores.append(fitter.score(testing_data, scoring_method=scoring_method))
 
     # If a single fitter was given as argument, return a single result
-    if len(fitters) == 1:
-        return fitter_scores[0]
-    return fitter_scores
+    return fitter_scores[0] if len(fitters) == 1 else fitter_scores
 
 
 def normalize(X, mean=None, std=None):
@@ -850,10 +844,7 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None, ix=None):
     else:
         b = np.dot(X.T, Y) + c2 * offset
 
-    if ix is not None:
-        M = np.c_[X.T[:, ix], b]
-    else:
-        M = np.c_[X.T, b]
+    M = np.c_[X.T[:, ix], b] if ix is not None else np.c_[X.T, b]
     R = solve(A, M, assume_a="pos", check_finite=False)
     return R[:, -1], R[:, :-1]
 
@@ -932,7 +923,7 @@ def _get_index(X) -> List[Any]:
     # we need a unique index because these are about to become column names.
     if isinstance(X, pd.DataFrame) and X.index.is_unique:
         index = list(X.index)
-    elif isinstance(X, pd.DataFrame) and not X.index.is_unique:
+    elif isinstance(X, pd.DataFrame):
         warnings.warn("DataFrame Index is not unique, defaulting to incrementing index instead.")
         index = list(range(X.shape[0]))
     elif isinstance(X, pd.Series):
@@ -994,11 +985,13 @@ def check_dimensions(df):
 
 
 def check_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = [col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"]
-    if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
+    if nonnumeric_cols := [
+        col
+        for (col, dtype) in df.dtypes.iteritems()
+        if dtype.name == "category" or dtype.kind not in "biuf"
+    ]:
         raise TypeError(
-            "DataFrame contains nonnumeric columns: %s. Try 1) using pandas.get_dummies to convert the non-numeric column(s) to numerical data, 2) using it in stratification `strata=`, or 3) dropping the column(s)."
-            % nonnumeric_cols
+            f"DataFrame contains nonnumeric columns: {nonnumeric_cols}. Try 1) using pandas.get_dummies to convert the non-numeric column(s) to numerical data, 2) using it in stratification `strata=`, or 3) dropping the column(s)."
         )
 
 
@@ -1109,8 +1102,11 @@ def check_complete_separation_low_variance(df: pd.DataFrame, events: np.ndarray,
     deaths_only = df.columns[_low_var(df.loc[events])]
     censors_only = df.columns[_low_var(df.loc[~events])]
     total = df.columns[_low_var(df)]
-    problem_columns = censors_only.union(deaths_only).difference(total).tolist()
-    if problem_columns:
+    if (
+        problem_columns := censors_only.union(deaths_only)
+        .difference(total)
+        .tolist()
+    ):
         warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
 
 >>> events = df['{event_col}'].astype(bool)
@@ -1128,8 +1124,7 @@ def pearson_correlation(x: np.ndarray, y: np.ndarray):
 
 
 def check_entry_times(T, entries):
-    count_invalid_rows = (entries >= T).sum()
-    if count_invalid_rows:
+    if count_invalid_rows := (entries >= T).sum():
         raise ValueError(
             """There exist %d row(s) where entry >= duration. Recommendation is to add a very small value to duration for these rows."""
             % count_invalid_rows
@@ -1181,15 +1176,12 @@ def check_nans_or_infs(df_or_array):
     try:
         infs = np.isinf(df_or_array)
     except TypeError:
-        warning_text = (
-            """Attempting to convert an unexpected datatype '%s' to float. Suggestion: 1) use `lifelines.utils.datetimes_to_durations` to do conversions or 2) manually convert to floats/booleans."""
-            % df_or_array.dtype
-        )
+        warning_text = f"""Attempting to convert an unexpected datatype '{df_or_array.dtype}' to float. Suggestion: 1) use `lifelines.utils.datetimes_to_durations` to do conversions or 2) manually convert to floats/booleans."""
         warnings.warn(warning_text, UserWarning)
         try:
             infs = np.isinf(df_or_array.astype(float))
         except:
-            raise TypeError("Wrong dtype '%s'." % df_or_array.dtype)
+            raise TypeError(f"Wrong dtype '{df_or_array.dtype}'.")
 
     if infs.any():
         raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
@@ -1342,7 +1334,7 @@ def add_covariate_to_timeline(
     cumulative_sum=False,
     cumulative_sum_prefix="cumsum_",
     delay=0,
-) -> pd.DataFrame:  # pylint: disable=too-many-arguments
+) -> pd.DataFrame:    # pylint: disable=too-many-arguments
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. Before using this function, it is recommended
@@ -1460,7 +1452,7 @@ def add_covariate_to_timeline(
 
     missing_cols = [col for col in (id_col, event_col, start_col, stop_col) if col not in long_form_df]
     if missing_cols:
-        raise IndexError("Missing column(s) %s in long_form_df" % missing_cols)
+        raise IndexError(f"Missing column(s) {missing_cols} in long_form_df")
 
     cv[duration_col] += delay
     cv = cv.dropna()
@@ -1587,20 +1579,20 @@ def _to_1d_array(x) -> np.ndarray:
 
 
 def _to_list(x) -> List[Any]:
-    if not isinstance(x, list):
-        return [x]
-    return x
+    return x if isinstance(x, list) else [x]
 
 
 def _to_tuple(x) -> Tuple[Any, ...]:
-    if not isinstance(x, tuple):
-        return (x,)
-    return x
+    return x if isinstance(x, tuple) else (x, )
 
 
 def format_p_value(decimals) -> Callable:
     threshold = 0.5 * 10 ** (-decimals)
-    return lambda p: "<%s" % threshold if p < threshold else "{:4.{prec}f}".format(p, prec=decimals)
+    return (
+        lambda p: f"<{threshold}"
+        if p < threshold
+        else "{:4.{prec}f}".format(p, prec=decimals)
+    )
 
 
 def format_exp_floats(decimals) -> Callable:
@@ -1616,7 +1608,7 @@ def format_floats(decimals) -> Callable:
 
 
 def leading_space(s) -> str:
-    return " %s" % s
+    return f" {s}"
 
 
 def map_leading_space(list) -> List[str]:
@@ -1695,10 +1687,7 @@ class DataframeSlicer:
 
 def make_simpliest_hashable(ele):
     if type(ele) == list:
-        if len(ele) == 1:
-            return str(ele[0])
-        else:
-            return tuple(ele)
+        return str(ele[0]) if len(ele) == 1 else tuple(ele)
     return ele
 
 
@@ -1951,6 +1940,4 @@ class CovariateParameterMappings:
         if self.force_intercept:
             formula += "+ 1"
 
-        design_info = formulaic.Formula(formula)
-
-        return design_info
+        return formulaic.Formula(formula)

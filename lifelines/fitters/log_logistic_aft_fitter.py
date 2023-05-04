@@ -144,10 +144,9 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
         if conditional_after is None:
             return pd.Series(alpha_ * (1 / (p) - 1) ** (1 / beta_), index=_get_index(df))
-        else:
-            conditional_after = np.asarray(conditional_after)
-            S = 1 / (1 + (conditional_after / alpha_) ** beta_)
-            return pd.Series(alpha_ * (1 / (p * S) - 1) ** (1 / beta_) - conditional_after, index=_get_index(df))
+        conditional_after = np.asarray(conditional_after)
+        S = 1 / (1 + (conditional_after / alpha_) ** beta_)
+        return pd.Series(alpha_ * (1 / (p * S) - 1) ** (1 / beta_) - conditional_after, index=_get_index(df))
 
     def predict_expectation(self, df, ancillary=None) -> pd.Series:
         """

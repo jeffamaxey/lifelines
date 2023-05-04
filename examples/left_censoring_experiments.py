@@ -30,15 +30,11 @@ fig, axes = plt.subplots(2, 2, figsize=(9, 5))
 axes = axes.reshape(4)
 
 for i, model in enumerate([WeibullFitter(), KaplanMeierFitter(), LogNormalFitter(), LogLogisticFitter()]):
-    if isinstance(model, KaplanMeierFitter):
-        model.fit_left_censoring(T, E, label=model.__class__.__name__)
-    else:
-        model.fit_left_censoring(T, E, label=model.__class__.__name__)
-
+    model.fit_left_censoring(T, E, label=model.__class__.__name__)
     model.plot_cumulative_density(ax=axes[i])
 plt.tight_layout()
 
-for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter()]):
+for model in [WeibullFitter(), LogNormalFitter(), LogLogisticFitter()]:
     model.fit_left_censoring(T, E)
     fig, axes = plt.subplots(2, 1, figsize=(8, 6))
 

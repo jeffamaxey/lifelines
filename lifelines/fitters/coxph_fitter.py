@@ -600,7 +600,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         if hasattr(self._model, attr):
             return getattr(self._model, attr)
 
-        raise AttributeError("%s has no attribute '%s'" % (self._class_name, attr))
+        raise AttributeError(f"{self._class_name} has no attribute '{attr}'")
 
     def __dir__(self):
         # pretty hacky - probably a better way
@@ -664,7 +664,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors.update({strata_namer(stratum, i): "1" for i in range(2, len(self.breakpoints) + 2)})
+                regressors |= {
+                    strata_namer(stratum, i): "1"
+                    for i in range(2, len(self.breakpoints) + 2)
+                }
         else:
             raise ValueError("Wrong type for strata. String, None, or list of strings")
 
@@ -719,7 +722,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors.update({strata_namer(stratum, i): "1" for i in range(1, self.n_baseline_knots + 1)})
+                regressors |= {
+                    strata_namer(stratum, i): "1"
+                    for i in range(1, self.n_baseline_knots + 1)
+                }
         else:
             raise ValueError("Wrong type for strata. String, None, or list of strings")
 
@@ -766,31 +772,34 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         headers = []
 
         if utils.CensoringType.is_interval_censoring(self):
-            headers.append(("lower bound col", "'%s'" % self.lower_bound_col))
-            headers.append(("upper bound col", "'%s'" % self.upper_bound_col))
+            headers.extend(
+                (
+                    ("lower bound col", f"'{self.lower_bound_col}'"),
+                    ("upper bound col", f"'{self.upper_bound_col}'"),
+                )
+            )
         else:
-            headers.append(("duration col", "'%s'" % self.duration_col))
+            headers.append(("duration col", f"'{self.duration_col}'"))
 
         if self.event_col:
-            headers.append(("event col", "'%s'" % self.event_col))
+            headers.append(("event col", f"'{self.event_col}'"))
         if self.weights_col:
-            headers.append(("weights col", "'%s'" % self.weights_col))
+            headers.append(("weights col", f"'{self.weights_col}'"))
         if self.entry_col:
-            headers.append(("entry col", "'%s'" % self.entry_col))
+            headers.append(("entry col", f"'{self.entry_col}'"))
         if self.cluster_col:
-            headers.append(("cluster col", "'%s'" % self.cluster_col))
+            headers.append(("cluster col", f"'{self.cluster_col}'"))
         if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
-            headers.append(("penalizer", self.penalizer))
-            headers.append(("l1 ratio", self.l1_ratio))
+            headers.extend((("penalizer", self.penalizer), ("l1 ratio", self.l1_ratio)))
         if self.robust or self.cluster_col:
             headers.append(("robust variance", True))
         if self.strata:
             headers.append(("strata", self.strata))
-        if self.baseline_estimation_method == "spline":
-            headers.append(("number of baseline knots", self.n_baseline_knots))
         if self.baseline_estimation_method == "piecewise":
             headers.append(("location of breaks", self.breakpoints))
 
+        elif self.baseline_estimation_method == "spline":
+            headers.append(("number of baseline knots", self.n_baseline_knots))
         headers.extend(
             [
                 ("baseline estimation", self.baseline_estimation_method),
@@ -945,7 +954,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         for covariate in covariates:
             if covariate not in self._central_values.columns:
-                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
+                raise KeyError(
+                    f"covariate `{covariate}` is not present in the original dataset"
+                )
 
         drawstyle = "steps-post" if isinstance(self._model, SemiParametricRegressionFitter) else None
         set_kwargs_drawstyle(kwargs, drawstyle)
@@ -958,9 +969,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
                 np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
             ):
-                X.index = ["%s=1" % c for c in covariates]
+                X.index = [f"{c}=1" for c in covariates]
             else:
-                X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+                X.index = [
+                    ", ".join(f"{c}={v}" for (c, v) in zip(covariates, row))
+                    for row in values
+                ]
             for covariate, value in zip(covariates, values.T):
                 X[covariate] = value
 
@@ -968,10 +982,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             # most relevant for categoricals.
             X = X.astype(self._central_values.dtypes)
 
-            getattr(self, "predict_%s" % y)(X).plot(ax=axes, **kwargs)
+            getattr(self, f"predict_{y}")(X).plot(ax=axes, **kwargs)
 
             if plot_baseline:
-                getattr(self, "predict_%s" % y)(x_bar).plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
+                getattr(self, f"predict_{y}")(x_bar).plot(
+                    ax=axes, ls=":", color="k", drawstyle=drawstyle
+                )
 
         else:
             axes = []
@@ -979,7 +995,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 ax = plt.figure().add_subplot(1, 1, 1)
 
                 # we turn this into a DF so stratum values that are ints are not converted to floats, etc.
-                x_bar = self._central_values.loc[stratum].rename("stratum %s baseline %s" % (str(stratum), y)).to_frame().T
+                x_bar = (
+                    self._central_values.loc[stratum]
+                    .rename(f"stratum {str(stratum)} baseline {y}")
+                    .to_frame()
+                    .T
+                )
 
                 for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
                     x_bar[name] = value
@@ -987,9 +1008,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 X = pd.concat([x_bar] * values.shape[0])
 
                 if np.array_equal(np.eye(len(covariates)), values):
-                    X.index = ["%s=1" % c for c in covariates]
+                    X.index = [f"{c}=1" for c in covariates]
                 else:
-                    X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+                    X.index = [
+                        ", ".join(f"{c}={v}" for (c, v) in zip(covariates, row))
+                        for row in values
+                    ]
 
                 for covariate, value in zip(covariates, values.T):
                     X[covariate] = value
@@ -998,9 +1022,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 # most relevant for categoricals.
                 X = X.astype(self._central_values.dtypes)
 
-                getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
+                getattr(self, f"predict_{y}")(X).plot(ax=ax, **kwargs)
                 if plot_baseline:
-                    getattr(self, "predict_%s" % y)(x_bar).plot(ax=ax, ls=":", drawstyle=drawstyle)
+                    getattr(self, f"predict_{y}")(x_bar).plot(ax=ax, ls=":", drawstyle=drawstyle)
                 plt.legend()
                 axes.append(ax)
         return axes
@@ -1366,7 +1390,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                     exceptions.StatisticalWarning,
                 )
             if (W <= 0).any():
-                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+                raise ValueError(
+                    f"values in weight column {self.weights_col} must be positive."
+                )
 
         if self.entry_col:
             utils.check_entry_times(T, entries)
@@ -1414,7 +1440,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             )
 
         decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
-        return getattr(self, "_get_efron_values_%s" % decision)
+        return getattr(self, f"_get_efron_values_{decision}")
 
     def _newton_rhapson_for_efron_model(
         self,
@@ -1428,7 +1454,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         precision: float = 1e-07,
         show_progress: bool = True,
         max_steps: int = 500,
-    ):  # pylint: disable=too-many-statements,too-many-branches
+    ):    # pylint: disable=too-many-statements,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -1551,11 +1577,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             # Save these as pending result
             hessian, gradient = h, g
 
-            if delta.size > 0:
-                norm_delta = norm(delta)
-            else:
-                norm_delta = 0
-
+            norm_delta = norm(delta) if delta.size > 0 else 0
             # reusing an above piece to make g * inv(h) * g.T faster.
             newton_decrement = g.dot(inv_h_dot_g_T) / 2
 
@@ -1590,10 +1612,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             previous_ll_ = ll_
             step_size = step_sizer.update(norm_delta).next()
 
-        if show_progress and success:
-            print("Convergence success after %d iterations." % (i))
-        elif show_progress and not success:
-            print("Convergence failed. See any warning messages.")
+        if show_progress:
+            if success:
+                print("Convergence success after %d iterations." % (i))
+            else:
+                print("Convergence failed. See any warning messages.")
 
         # report to the user problems that we detect.
         if success and norm_delta > 0.1:

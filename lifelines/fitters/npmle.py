@@ -39,10 +39,7 @@ class min_max:
 
 
 def temper(i: int, optimize) -> float:
-    if optimize:
-        return 0.9 * (2 * np.arctan(i / 100) / np.pi) + 1
-    else:
-        return 1.0
+    return 0.9 * (2 * np.arctan(i / 100) / np.pi) + 1 if optimize else 1.0
 
 
 def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weights, i, optimize) -> np.ndarray:
@@ -86,13 +83,11 @@ def create_turnbull_intervals(left, right) -> List[interval]:
 
     union = sorted(left + right)
 
-    intervals = []
-
-    for e1, e2 in zip(union, union[1:]):
-        if e1[1] == "l" and e2[1] == "r":
-            intervals.append(interval(e1[0], e2[0]))
-
-    return intervals
+    return [
+        interval(e1[0], e2[0])
+        for e1, e2 in zip(union, union[1:])
+        if e1[1] == "l" and e2[1] == "r"
+    ]
 
 
 def is_subset(query_interval: interval, super_interval: interval) -> bool:
@@ -136,9 +131,7 @@ def check_convergence(
         print("Iteration %d " % i)
         print("   delta log-likelihood: %.10f" % delta)
         print("   log-like:             %.6f" % log_likelihood(p_new, turnbull_lookup, weights))
-    if (delta < tol) and (delta >= 0):
-        return True
-    return False
+    return delta < tol and delta >= 0
 
 
 def create_observation_intervals(obs) -> List[interval]:

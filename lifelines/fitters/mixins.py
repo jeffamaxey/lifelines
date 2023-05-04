@@ -219,7 +219,7 @@ class ProportionalHazardMixin:
                     ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
                     axes[-1].append(ax)
 
-                fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
+                fig.suptitle(f"Scaled Schoenfeld residuals of '{variable}'", fontsize=14)
                 plt.tight_layout()
                 plt.subplots_adjust(top=0.90)
 

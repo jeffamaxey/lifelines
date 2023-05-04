@@ -21,5 +21,5 @@ if __name__ == "__main__":
     lnf = LogNormalFitter()
     start_time = time.time()
     lnf.fit(T, E)
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(f"--- {time.time() - start_time} seconds ---")
     lnf.print_summary(5)

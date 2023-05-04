@@ -430,16 +430,12 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         """Alias of ``plot``"""
         if not CensoringType.is_interval_censoring(self):
             return _plot_estimate(self, estimate="survival_function_", **kwargs)
-        else:
             # hack for now.
-            def safe_pop(dict, key):
-                if key in dict:
-                    return dict.pop(key)
-                else:
-                    return None
+        def safe_pop(dict, key):
+            return dict.pop(key) if key in dict else None
 
-            color = coalesce(safe_pop(kwargs, "c"), safe_pop(kwargs, "color"), "k")
-            self.survival_function_.plot(drawstyle="steps-pre", color=color, **kwargs)
+        color = coalesce(safe_pop(kwargs, "c"), safe_pop(kwargs, "color"), "k")
+        self.survival_function_.plot(drawstyle="steps-pre", color=color, **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         """
@@ -483,10 +479,9 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         """
         if not CensoringType.is_interval_censoring(self):
             return _plot_estimate(self, estimate="cumulative_density_", **kwargs)
-        else:
-            # hack for now.
-            color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
-            self.cumulative_density_.plot(drawstyle="steps", color=color, **kwargs)
+        # hack for now.
+        color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
+        self.cumulative_density_.plot(drawstyle="steps", color=color, **kwargs)
 
     def _bounds(self, estimate_, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.

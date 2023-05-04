@@ -14,5 +14,5 @@ if __name__ == "__main__":
     start_time = time.time()
     ctv.fit(df, id_col="index", event_col="arrest", start_col="start", stop_col="stop")
     time_took = time.time() - start_time
-    print("--- %s seconds ---" % time_took)
+    print(f"--- {time_took} seconds ---")
     ctv.print_summary()

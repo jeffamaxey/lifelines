@@ -154,14 +154,13 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
 
         if conditional_after is None:
             return pd.Series(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
-        else:
-            conditional_after = np.asarray(conditional_after)
-            Z = (np.log(conditional_after) - np.log(exp_mu_)) / sigma_
-            S = norm.sf(Z)
+        conditional_after = np.asarray(conditional_after)
+        Z = (np.log(conditional_after) - np.log(exp_mu_)) / sigma_
+        S = norm.sf(Z)
 
-            return pd.Series(
-                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after, index=_get_index(df)
-            )
+        return pd.Series(
+            exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after, index=_get_index(df)
+        )
 
     def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
         """

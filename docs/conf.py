@@ -56,7 +56,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "lifelines"
-copyright = "2014-{},  Cam Davidson-Pilon".format(date.today().year)
+copyright = f"2014-{date.today().year},  Cam Davidson-Pilon"
 
 
 # The version info for the project you're documenting, acts as replacement for

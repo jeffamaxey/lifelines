@@ -204,16 +204,12 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
     coefficients = np.zeros((t, d))
     data_generators = []
     for i in range(d):
-        f = FUNCS[random.randint(0, n_funcs)] if not constant else constant_
-        if i in independent:
-            beta = 0
-        else:
-            beta = randgen((1 - constant) * 0.5 / d)
+        f = constant_ if constant else FUNCS[random.randint(0, n_funcs)]
+        beta = 0 if i in independent else randgen((1 - constant) * 0.5 / d)
         coefficients[:, i] = f(timelines, alpha=randgen(2000.0 / t), beta=beta)
         data_generators.append(f.__doc__)
 
-    df_coefficients = pd.DataFrame(coefficients, columns=data_generators, index=timelines)
-    return df_coefficients
+    return pd.DataFrame(coefficients, columns=data_generators, index=timelines)
 
 
 def generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):

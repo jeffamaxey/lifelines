@@ -108,7 +108,12 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
 
     dist = get_distribution_name_of_lifelines_model(model)
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
-    ax.plot(timeline, dist_object.cdf(timeline), label="fitted %s" % dist, **plot_kwargs)
+    ax.plot(
+        timeline,
+        dist_object.cdf(timeline),
+        label=f"fitted {dist}",
+        **plot_kwargs,
+    )
     ax.legend()
     return ax
 
@@ -264,7 +269,7 @@ def qq_plot(model, ax=None, scatter_color="k", **plot_kwargs):
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
 
     COL_EMP = "empirical quantiles"
-    COL_THEO = "fitted %s quantiles" % dist
+    COL_THEO = f"fitted {dist} quantiles"
 
     if CensoringType.is_left_censoring(model):
         kmf = KaplanMeierFitter().fit_left_censoring(
@@ -281,7 +286,10 @@ def qq_plot(model, ax=None, scatter_color="k", **plot_kwargs):
         kmf = KaplanMeierFitter().fit_interval_censoring(
             model.lower_bound, model.upper_bound, label=COL_EMP, weights=model.weights, entry=model.entry
         )
-        sf, cdf = kmf.survival_function_.mean(1), kmf.cumulative_density_[COL_EMP + "_lower"]
+        sf, cdf = (
+            kmf.survival_function_.mean(1),
+            kmf.cumulative_density_[f"{COL_EMP}_lower"],
+        )
 
     q = np.unique(cdf.values)
 
@@ -516,46 +524,51 @@ def add_at_risk_counts(
                 max_length = len(str(max(counts)))
                 for i, c in enumerate(counts):
                     if i % n_rows == 0:
-                        if is_latex_enabled():
-                            lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
-                        else:
-                            lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
-
+                        lbl += (
+                            ("\n" if i > 0 else "")
+                            + r"\textbf{%s}" % labels[int(i / n_rows)]
+                            + "\n"
+                            if is_latex_enabled()
+                            else ("\n" if i > 0 else "")
+                            + f"{labels[int(i / n_rows)]}"
+                            + "\n"
+                        )
                     l = rows_to_show[i % n_rows]
-                    s = "{}".format(l.rjust(10, " ")) + (" " * (max_length - len(str(c)) + 3)) + "{{:>{}d}}\n".format(max_length)
+                    s = (
+                        f'{l.rjust(10, " ")}'
+                        + " " * (max_length - len(str(c)) + 3)
+                        + "{{:>{}d}}\n".format(max_length)
+                    )
 
                     lbl += s.format(c)
 
             else:
                 # Create tick label
                 lbl += ""
+                s = "\n{}"
                 for i, c in enumerate(counts):
                     if i % n_rows == 0 and i > 0:
                         lbl += "\n\n"
-                    s = "\n{}"
                     lbl += s.format(c)
+
+        elif tick == ax2.get_xticks()[0]:
+            max_length = len(str(max(counts)))
+
+            lbl += rows_to_show[0] + "\n"
+
+            for i, c in enumerate(counts):
+                s = (
+                    f'{labels[i].rjust(10, " ")}'
+                    + " " * (max_length - len(str(c)) + 3)
+                ) + "{{:>{}d}}\n".format(max_length)
+                lbl += s.format(c)
 
         else:
-            # if only one row to show, show in "condensed" version
-            if tick == ax2.get_xticks()[0]:
-                max_length = len(str(max(counts)))
-
-                lbl += rows_to_show[0] + "\n"
-
-                for i, c in enumerate(counts):
-                    s = (
-                        "{}".format(labels[i].rjust(10, " "))
-                        + (" " * (max_length - len(str(c)) + 3))
-                        + "{{:>{}d}}\n".format(max_length)
-                    )
-                    lbl += s.format(c)
-
-            else:
-                # Create tick label
-                lbl += ""
-                for i, c in enumerate(counts):
-                    s = "\n{}"
-                    lbl += s.format(c)
+            # Create tick label
+            lbl += ""
+            s = "\n{}"
+            for c in counts:
+                lbl += s.format(c)
 
         ticklabels.append(lbl)
 
@@ -743,7 +756,7 @@ def plot_lifetimes(
         ax.hlines(i, _iloc(entry, i), _iloc(durations, i), color=c, lw=1.5)
         if left_truncated:
             ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
-        m = "" if not _iloc(event_observed, i) else "o"
+        m = "o" if _iloc(event_observed, i) else ""
         ax.scatter(_iloc(durations, i), i, color=c, marker=m, s=13)
 
     if label_plot_bars:
@@ -907,7 +920,7 @@ def _plot_estimate(
 
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
-        cs.update(plot_estimate_config.censor_styles)
+        cs |= plot_estimate_config.censor_styles
         censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = plot_estimate_config.predict_at_times(censored_times).values
         plot_estimate_config.ax.plot(censored_times, v, linestyle="None", color=plot_estimate_config.colour, **cs)

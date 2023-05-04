@@ -1071,32 +1071,27 @@ def test_find_best_parametric_model():
     E = np.ones_like(T)
 
     model, score = utils.find_best_parametric_model(T, E)
-    assert True
 
 
 def test_find_best_parametric_model_can_accept_other_models():
     T = np.random.exponential(2, 1000)
     model, score = utils.find_best_parametric_model(T, additional_models=[ExponentialFitter(), ExponentialFitter()])
-    assert True
 
 
 def test_find_best_parametric_model_with_BIC():
     T = np.random.exponential(2, 1000)
     model, score = utils.find_best_parametric_model(T, scoring_method="BIC")
-    assert True
 
 
 def test_find_best_parametric_model_works_for_left_censoring():
     T = np.random.exponential(2, 100)
     model, score = utils.find_best_parametric_model(T, censoring_type="left", show_progress=True)
-    assert True
 
 
 def test_find_best_parametric_model_works_for_interval_censoring():
     T_1 = np.random.exponential(2, 100)
     T_2 = T_1 + 1
     model, score = utils.find_best_parametric_model((T_1, T_2), censoring_type="interval", show_progress=True)
-    assert True
 
 
 def test_find_best_parametric_model_works_with_weights_and_entry():
@@ -1104,7 +1099,6 @@ def test_find_best_parametric_model_works_with_weights_and_entry():
     W = np.random.randint(1, 5, size=100)
     entry = np.random.exponential(0.01, 100)
     model, score = utils.find_best_parametric_model(T, weights=W, entry=entry, show_progress=True)
-    assert True
 
 
 def test_safe_exp():

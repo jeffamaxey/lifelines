@@ -71,7 +71,7 @@ class NelsonAalenFitter(UnivariateFitter):
     @CensoringType.right_censoring
     def fit(
         self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
-    ):  # pylint: disable=too-many-arguments
+    ):    # pylint: disable=too-many-arguments
         """
         Parameters
         -----------
@@ -108,16 +108,15 @@ class NelsonAalenFitter(UnivariateFitter):
             event_observed = np.asarray(event_observed)
             check_nans_or_infs(event_observed)
 
-        if weights is not None:
-            if (weights.astype(int) != weights).any():
-                warnings.warn(
-                    """It looks like your weights are not integers, possibly propensity scores then?
+        if weights is not None and (weights.astype(int) != weights).any():
+            warnings.warn(
+                """It looks like your weights are not integers, possibly propensity scores then?
   It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
   estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
   or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
                   """,
-                    StatisticalWarning,
-                )
+                StatisticalWarning,
+            )
 
         (self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights) = _preprocess_inputs(
             durations, event_observed, timeline, entry, weights
@@ -167,7 +166,8 @@ class NelsonAalenFitter(UnivariateFitter):
     def _variance_f_smooth(self, population, deaths):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1) ** 2)
         return pd.Series(
-            cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
+            cum_[population - 1]
+            - np.where(population - deaths >= 1, cum_[population - deaths - 1], 0),
             index=population.index,
         )
 
@@ -177,7 +177,8 @@ class NelsonAalenFitter(UnivariateFitter):
     def _additive_f_smooth(self, population, deaths):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1))
         return pd.Series(
-            cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
+            cum_[population - 1]
+            - np.where(population - deaths >= 1, cum_[population - deaths - 1], 0),
             index=population.index,
         )
 

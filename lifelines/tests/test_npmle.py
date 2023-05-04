@@ -90,7 +90,7 @@ def test_max_lower_bound_less_than_min_upper_bound():
     np.random.seed(1)
     left0 = np.random.normal(loc=60, scale=2, size=20)
     add_time = np.random.normal(loc=100, scale=2, size=10)
-    right1 = left0[0:10] + add_time
+    right1 = left0[:10] + add_time
     right0 = right1.tolist() + [np.inf] * 10
 
     # KaplanMeier

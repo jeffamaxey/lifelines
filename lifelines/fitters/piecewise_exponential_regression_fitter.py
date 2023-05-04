@@ -76,7 +76,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         T = T.reshape((n, 1))
         bps = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bps, (n, 1)), T)
-        M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
+        M = np.hstack([M[:, (0, )], np.diff(M, axis=1)])
         lambdas_ = np.array([safe_exp(-np.dot(Xs[param], params[param])) for param in self._fitted_parameter_names])
         return (M * lambdas_.T).sum(1)
 
@@ -123,6 +123,6 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
         bp = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bp, (n, 1)), times)
-        M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
+        M = np.hstack([M[:, (0, )], np.diff(M, axis=1)])
 
         return pd.DataFrame(np.dot(M, (1 / lambdas_)), columns=_get_index(df), index=times[:, 0])

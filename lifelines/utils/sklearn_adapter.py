@@ -13,8 +13,7 @@ __all__ = ["sklearn_adapter"]
 
 def filter_kwargs(f, kwargs):
     s = inspect.signature(f)
-    res = {k: kwargs[k] for k in s.parameters if k in kwargs}
-    return res
+    return {k: kwargs[k] for k in s.parameters if k in kwargs}
 
 
 class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
@@ -43,7 +42,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
 
         """
         if not isinstance(X, pd.DataFrame):
-            raise ValueError("X must be a DataFrame. Got type: {}".format(type(X)))
+            raise ValueError(f"X must be a DataFrame. Got type: {type(X)}")
 
         X = X.copy()
 
@@ -60,11 +59,13 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         return self
 
     def get_params(self, deep=True):
-        out = {}
-        for name, p in inspect.signature(self.lifelines_model.__init__).parameters.items():
-            if p.kind < 4:  # ignore kwargs
-                out[name] = getattr(self.lifelines_model, name)
-        return out
+        return {
+            name: getattr(self.lifelines_model, name)
+            for name, p in inspect.signature(
+                self.lifelines_model.__init__
+            ).parameters.items()
+            if p.kind < 4
+        }
 
     def predict(self, X, **kwargs):
         """
@@ -73,8 +74,11 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         X: DataFrame or numpy array
 
         """
-        predictions = getattr(self.lifelines_model, self._predict_method)(X, **kwargs).squeeze().values
-        return predictions
+        return (
+            getattr(self.lifelines_model, self._predict_method)(X, **kwargs)
+            .squeeze()
+            .values
+        )
 
     def score(self, X, y, **kwargs):
         """

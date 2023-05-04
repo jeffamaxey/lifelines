@@ -23,5 +23,5 @@ if __name__ == "__main__":
     wb = WeibullFitter()
     start_time = time.time()
     wb.fit_interval_censoring(df["start"], df["stop"], df["E"], weights=df[0])
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(f"--- {time.time() - start_time} seconds ---")
     wb.print_summary(5)

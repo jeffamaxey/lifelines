@@ -16,5 +16,5 @@ if __name__ == "__main__":
     aaf = AalenAdditiveFitter()
     start_time = time.time()
     aaf.fit(df, duration_col="week", event_col="arrest")
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(f"--- {time.time() - start_time} seconds ---")
     aaf.print_summary(5)

@@ -131,9 +131,8 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             assert self._ll_null_dof == 3
 
             default_point = super(GeneralizedGammaRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)
-            nested_point = {}
+            nested_point = {"mu_": np.array([0.0] * (len(Xs["mu_"].columns)))}
 
-            nested_point["mu_"] = np.array([0.0] * (len(Xs["mu_"].columns)))
             if constant_col in Xs["mu_"].columns:
                 nested_point["mu_"][Xs["mu_"].columns.index(constant_col)] = uni_model.mu_
 

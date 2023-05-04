@@ -20,7 +20,7 @@ if __name__ == "__main__":
     wp = WeibullAFTFitter()
     start_time = time.time()
     wp.fit_right_censoring(df, "week", event_col="arrest")
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(f"--- {time.time() - start_time} seconds ---")
     wp.print_summary()
     print(wp.score(df, scoring_method="log_likelihood"))
     print(wp.score(df, scoring_method="concordance_index"))

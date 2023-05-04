@@ -107,7 +107,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         strata=None,
         initial_point=None,
         formula: str = None,
-    ):  # pylint: disable=too-many-arguments
+    ):    # pylint: disable=too-many-arguments
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -171,7 +171,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
 
         df = df.copy()
 
-        if not (event_col in df and start_col in df and stop_col in df):
+        if event_col not in df or start_col not in df or stop_col not in df:
             raise KeyError("A column specified in the call to `fit` does not exist in the DataFrame provided.")
 
         if weights_col is None:
@@ -188,9 +188,9 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         if self.strata is not None and self.id_col is not None:
             df = df.set_index(_to_list(self.strata) + [id_col])
             df = df.sort_index()
-        elif self.strata is not None and self.id_col is None:
+        elif self.strata is not None:
             df = df.set_index(_to_list(self.strata))
-        elif self.strata is None and self.id_col is not None:
+        elif self.id_col is not None:
             df = df.set_index([id_col])
 
         events, start, stop = (
@@ -321,7 +321,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         precision=10e-6,
         max_steps=50,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+    ):    # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -356,11 +356,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         n, d = df.shape
 
         # make sure betas are correct size.
-        if initial_point is not None:
-            beta = initial_point
-        else:
-            beta = np.zeros((d,))
-
+        beta = initial_point if initial_point is not None else np.zeros((d,))
         i = 0
         converging = True
         ll, previous_ll = 0, 0
@@ -468,10 +464,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         self._score_ = gradient
         self.log_likelihood_ = ll
 
-        if show_progress and completed:
-            print("Convergence completed after %d iterations." % (i))
-        elif show_progress and not completed:
-            print("Convergence failed. See any warning messages.")
+        if show_progress:
+            if completed:
+                print("Convergence completed after %d iterations." % (i))
+            else:
+                print("Convergence failed. See any warning messages.")
 
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
@@ -656,9 +653,9 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         headers = []
 
         if self.event_col:
-            headers.append(("event col", "'%s'" % self.event_col))
+            headers.append(("event col", f"'{self.event_col}'"))
         if self.weights_col:
-            headers.append(("weights col", "'%s'" % self.weights_col))
+            headers.append(("weights col", f"'{self.weights_col}'"))
         if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.strata:
@@ -675,18 +672,22 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         )
 
         sr = self.log_likelihood_ratio_test()
-        footers = []
-        footers.extend(
-            [
-                ("Partial AIC", "{:.{prec}f}".format(self.AIC_partial_, prec=decimals)),
-                (
-                    "log-likelihood ratio test",
-                    "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
+        footers = [
+            (
+                "Partial AIC",
+                "{:.{prec}f}".format(self.AIC_partial_, prec=decimals),
+            ),
+            (
+                "log-likelihood ratio test",
+                "{:.{prec}f} on {} df".format(
+                    sr.test_statistic, sr.degrees_freedom, prec=decimals
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
-            ]
-        )
-
+            ),
+            (
+                "-log2(p) of ll-ratio test",
+                "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals),
+            ),
+        ]
         p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
         p.print(style=style)
 
@@ -823,7 +824,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 self.event_observed.sum(),
             )
         except AttributeError:
-            s = """<lifelines.%s>""" % classname
+            s = f"""<lifelines.{classname}>"""
         return s
 
     def _compute_residuals(self, df, events, start, stop, weights):
@@ -835,9 +836,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         score_residuals = self._compute_residuals(df, events, start, stop, weights) * weights[:, None]
 
         naive_var = inv(self._hessian_)
-        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
-
-        return delta_betas
+        return -score_residuals.dot(naive_var) / self._norm_std.values
 
     def _compute_sandwich_estimator(self, X, events, start, stop, weights):
 
@@ -846,8 +845,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if self.cluster_col:
             delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
 
-        sandwich_estimator = delta_betas.T.dot(delta_betas)
-        return sandwich_estimator
+        return delta_betas.T.dot(delta_betas)
 
     def _compute_standard_errors(self, X, events, start, stop, weights):
         if self.robust:

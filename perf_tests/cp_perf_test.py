@@ -20,4 +20,4 @@ if __name__ == "__main__":
     start_time = time.time()
     cph.fit(df, duration_col="week", event_col="arrest", show_progress=True, timeline=np.linspace(1, 60, 100))
     print(cph.score(df))
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(f"--- {time.time() - start_time} seconds ---")

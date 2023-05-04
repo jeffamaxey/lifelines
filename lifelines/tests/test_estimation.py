@@ -517,8 +517,8 @@ class TestUnivariateFitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0], label=label)
             assert fitter._label == label
-            assert fitter.confidence_interval_.columns[0] == "%s_lower_0.95" % label
-            assert fitter.confidence_interval_.columns[1] == "%s_upper_0.95" % label
+            assert fitter.confidence_interval_.columns[0] == f"{label}_lower_0.95"
+            assert fitter.confidence_interval_.columns[1] == f"{label}_upper_0.95"
 
     def test_ci_labels(self, positive_sample_lifetimes, univariate_fitters):
         expected = ["upper", "lower"]
@@ -1142,15 +1142,13 @@ class TestKaplanMeierFitter:
         v = 1.0
         n = N * 1.0
         for i, t in enumerate(ordered_lifetimes):
-            if observed is not None:
+            if observed is None:
+                v *= 1 - lifetimes_counter.get(t) / n
+            elif n != 0:
                 ix = lifetimes == t
                 c = sum(1 - observed[ix])
-                if n != 0:
-                    v *= 1 - (lifetimes_counter.get(t) - c) / n
-                n -= lifetimes_counter.get(t)
-            else:
-                v *= 1 - lifetimes_counter.get(t) / n
-                n -= lifetimes_counter.get(t)
+                v *= 1 - (lifetimes_counter.get(t) - c) / n
+            n -= lifetimes_counter.get(t)
             km[i] = v
         if lifetimes_counter.get(0) is None:
             km = np.insert(km, 0, 1.0)
@@ -1162,7 +1160,6 @@ class TestKaplanMeierFitter:
         E = T < 0.001
         kmf = KaplanMeierFitter()
         kmf.fit(T, E)
-        assert True
 
     def test_left_truncation_against_Cole_and_Hudgens(self):
         df = load_multicenter_aids_cohort_study()
@@ -1304,7 +1301,6 @@ class TestKaplanMeierFitter:
         E = np.random.binomial(1, 0.9, n)
         with pytest.warns(StatisticalWarning) as w:
             kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
-            assert True
 
     def test_weights_with_unaligned_index(self):
         df = pd.DataFrame(index=[5, 6, 7, 8])
@@ -1364,7 +1360,7 @@ class TestKaplanMeierFitter:
 
         n = 10000
         df = pd.DataFrame()
-        df["id"] = [i for i in range(n)]
+        df["id"] = list(range(n))
         df["t"] = np.ceil(np.random.weibull(1, size=n) * 5)
         df["t_cens"] = np.ceil(np.random.weibull(1, size=n) * 3)
         df["t_enter"] = np.floor(np.random.weibull(1.5, size=n) * 2)
@@ -1498,15 +1494,13 @@ class TestNelsonAalenFitter:
         v = 0.0
         n = N * 1.0
         for i, t in enumerate(ordered_lifetimes):
-            if observed is not None:
+            if observed is None:
+                v += lifetimes_counter.get(t) / n
+            elif n != 0:
                 ix = lifetimes == t
                 c = sum(1 - observed[ix])
-                if n != 0:
-                    v += (lifetimes_counter.get(t) - c) / n
-                n -= lifetimes_counter.get(t)
-            else:
-                v += lifetimes_counter.get(t) / n
-                n -= lifetimes_counter.get(t)
+                v += (lifetimes_counter.get(t) - c) / n
+            n -= lifetimes_counter.get(t)
             na[i] = v
         if lifetimes_counter.get(0) is None:
             na = np.insert(na, 0, 0.0)
@@ -1532,12 +1526,12 @@ class TestNelsonAalenFitter:
 
     def test_loc_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset["T"])
-        assert naf.cumulative_hazard_.loc[0:10].shape[0] == 4
+        assert naf.cumulative_hazard_.loc[:10].shape[0] == 4
 
     def test_iloc_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset["T"])
-        assert naf.cumulative_hazard_.iloc[0:10].shape[0] == 10
-        assert naf.cumulative_hazard_.iloc[0:-1].shape[0] == 32
+        assert naf.cumulative_hazard_.iloc[:10].shape[0] == 10
+        assert naf.cumulative_hazard_.iloc[:-1].shape[0] == 32
 
     def test_smoothing_hazard_ties(self):
         T = np.random.binomial(20, 0.7, size=300)
@@ -1724,8 +1718,7 @@ class CureModelC(CureModelB):
 class TestCustomRegressionModel:
     @pytest.fixture
     def rossi(self):
-        rossi = load_rossi()
-        return rossi
+        return load_rossi()
 
     def test_reparameterization_flips_the_sign(self, rossi):
 
@@ -1792,8 +1785,7 @@ class TestCustomRegressionModel:
 class TestRegressionFitters:
     @pytest.fixture
     def rossi(self):
-        rossi = load_rossi()
-        return rossi
+        return load_rossi()
 
     @pytest.fixture
     def regression_models_sans_strata_model(self):
@@ -2020,10 +2012,13 @@ class TestRegressionFitters:
         normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in [CoxPHFitter(penalizer=1e-6, baseline_estimation_method="spline", n_baseline_knots=3)]:
-            if (
-                isinstance(fitter, PiecewiseExponentialRegressionFitter)
-                or isinstance(fitter, CustomRegressionModelTesting)
-                or isinstance(fitter, GeneralizedGammaRegressionFitter)
+            if isinstance(
+                fitter,
+                (
+                    PiecewiseExponentialRegressionFitter,
+                    CustomRegressionModelTesting,
+                    GeneralizedGammaRegressionFitter,
+                ),
             ):
                 continue
 
@@ -2033,15 +2028,14 @@ class TestRegressionFitters:
 
             if isinstance(hazards, pd.DataFrame):
                 assert_frame_equal(hazards.reset_index(drop=True), hazards_norm.reset_index(drop=True))
+            elif isinstance(hazards.index, pd.MultiIndex):
+                assert_series_equal(
+                    hazards.drop("Intercept", axis=0, level=1),
+                    hazards_norm.drop("Intercept", axis=0, level=1),
+                    check_less_precise=1,
+                )
             else:
-                if isinstance(hazards.index, pd.MultiIndex):
-                    assert_series_equal(
-                        hazards.drop("Intercept", axis=0, level=1),
-                        hazards_norm.drop("Intercept", axis=0, level=1),
-                        check_less_precise=1,
-                    )
-                else:
-                    assert_series_equal(hazards, hazards_norm, check_less_precise=1)
+                assert_series_equal(hazards, hazards_norm, check_less_precise=1)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -2072,7 +2066,7 @@ class TestRegressionFitters:
 
         for fitter in [CoxPHFitter(), WeibullAFTFitter()]:
             for subset in [["t", "categoryb_"], ["t", "string_"], ["t", "uint8_"], ["t", "categorya_"], ["t", "bool_"]]:
-                formula = "%s" % subset[-1]
+                formula = f"{subset[-1]}"
                 fitter.fit(df[subset], duration_col="t", formula=formula)
 
     @pytest.mark.xfail
@@ -2126,8 +2120,6 @@ class TestRegressionFitters:
 
             func = lambda row: fitter.predict_survival_function(row, times=row["week"])
             df.apply(func, axis=1)
-
-        assert True
 
 
 class TestPiecewiseExponentialRegressionFitter:
@@ -3136,7 +3128,6 @@ class TestCoxPHFitter:
 
     def test_model_can_accept_null_covariates(self, cph, rossi):
         cph.fit(rossi[["week", "arrest"]], "week", "arrest")
-        assert True
 
     @pytest.mark.parametrize(
         "cph",
@@ -3400,7 +3391,7 @@ class TestCoxPHFitter:
         assert df.dtypes["T"] in (int, np.dtype("int64"))
 
     def test_cph_will_handle_times_with_only_censored_individuals(self, rossi):
-        rossi_29 = rossi.iloc[0:10].copy()
+        rossi_29 = rossi.iloc[:10].copy()
         rossi_29["week"] = 29
         rossi_29["arrest"] = False
 
@@ -4403,10 +4394,9 @@ log-likelihood ratio test = 33.27 on 7 df
             data=rossi)
         summary(mod.allison)
         """
-        expected = 33.27
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        assert (cf.log_likelihood_ratio_test().test_statistic - expected) < 0.001
+        assert cf.log_likelihood_ratio_test().test_statistic < 33.271
 
     def test_output_with_strata_against_R(self, rossi):
         """
@@ -4482,7 +4472,6 @@ log-likelihood ratio test = 33.27 on 7 df
         del df["ID"]
         cp = CoxPHFitter()
         cp.fit(df, "T", "Status", strata=["Stratum"])
-        assert True
 
     def test_coxph_throws_a_explainable_error_when_predict_sees_a_strata_it_hasnt_seen(self):
         training_df = pd.DataFrame.from_records(
@@ -4523,7 +4512,7 @@ log-likelihood ratio test = 33.27 on 7 df
         cp.fit(rossi, "week", "arrest", strata=["race", "paro", "mar", "wexp"])
 
         npt.assert_almost_equal(cp.summary["coef"].values, [-0.335, -0.059, 0.100], decimal=3)
-        assert abs(cp.log_likelihood_ - -436.9339) / 436.9339 < 0.01
+        assert abs(cp.log_likelihood_ - -436.9339) < 4.369339
 
     def test_baseline_hazard_works_with_strata_against_R_output(self, rossi):
         """
@@ -4909,7 +4898,7 @@ class TestAalenAdditiveFitter:
         aaf = AalenAdditiveFitter(coef_penalizer=0.1)
         for data_pred in [data_pred1, data_pred2]:
             mean_scores = []
-            for repeat in range(20):
+            for _ in range(20):
                 scores = k_fold_cross_validation(
                     aaf, data_pred, duration_col="t", event_col="E", k=3, scoring_method="concordance_index"
                 )
@@ -4924,7 +4913,7 @@ class TestAalenAdditiveFitter:
         aaf = AalenAdditiveFitter(coef_penalizer=0.1)
         for data_pred in [data_pred1, data_pred2]:
             mean_scores = []
-            for repeat in range(20):
+            for _ in range(20):
                 scores = k_fold_cross_validation(
                     aaf, data_pred, duration_col="t", event_col="E", k=3, scoring_method="log_likelihood"
                 )
@@ -5127,7 +5116,6 @@ class TestCoxTimeVaryingFitter:
 
         df.loc[(df["start"] == df["stop"]) & (df["start"] == 0) & df["event"], "stop"] = 0.5
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-        assert True
 
     def test_ctv_fitter_will_handle_trivial_weight_col(self, ctv, dfcv):
         ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
@@ -5196,7 +5184,6 @@ class TestCoxTimeVaryingFitter:
         )
 
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-        assert True
 
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
         dfcv["constant"] = 1.0
@@ -5350,7 +5337,9 @@ class TestCoxTimeVaryingFitter:
             1.763620039,
         ]
         ctv.fit(heart, id_col="id", event_col="event")
-        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[0:3, 0], expected[0:3], decimal=3)
+        npt.assert_array_almost_equal(
+            ctv.baseline_cumulative_hazard_.values[0:3, 0], expected[:3], decimal=3
+        )
         npt.assert_array_almost_equal(
             ctv.baseline_cumulative_hazard_.values[:, 0], expected, decimal=2
         )  # errors accumulate fast =(
@@ -5379,7 +5368,6 @@ class TestCoxTimeVaryingFitter:
     def test_penalizer(self, heart):
         ctv = CoxTimeVaryingFitter(penalizer=1.0)
         ctv.fit(heart, id_col="id", event_col="event")
-        assert True
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
@@ -5606,7 +5594,7 @@ class TestMixtureCureFitter:
         observed[mask] = False
 
         # Add in some 'cured' samples, to make it 20% cured
-        C = int(N / 4)
+        C = N // 4
         T = np.concatenate([T, last_observation_time * np.ones(C)])
         observed = np.concatenate([observed, np.zeros(C, dtype=bool)])
 

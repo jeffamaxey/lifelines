@@ -128,12 +128,11 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
 
         if lambda_ > 0:
-            v = -gammainccln(ilambda_2, clipped_exp)
+            return -gammainccln(ilambda_2, clipped_exp)
         elif lambda_ < 0:
-            v = -gammaincln(ilambda_2, clipped_exp)
+            return -gammaincln(ilambda_2, clipped_exp)
         else:
-            v = -norm.logsf(Z)
-        return v
+            return -norm.logsf(Z)
 
     def _log_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
@@ -141,7 +140,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         Z = (log(times) - mu_) / safe_exp(ln_sigma_)
         clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
         if lambda_ > 0:
-            v = (
+            return (
                 log(lambda_)
                 - log(times)
                 - ln_sigma_
@@ -152,7 +151,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
                 - gammainccln(ilambda_2, clipped_exp)
             )
         elif lambda_ < 0:
-            v = (
+            return (
                 log(-lambda_)
                 - log(times)
                 - ln_sigma_
@@ -163,8 +162,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
                 - gammaincln(ilambda_2, clipped_exp)
             )
         else:
-            v = norm.logpdf(Z, loc=0, scale=1) - ln_sigma_ - log(times) - norm.logsf(Z)
-        return v
+            return norm.logpdf(Z, loc=0, scale=1) - ln_sigma_ - log(times) - norm.logsf(Z)
 
     def percentile(self, p):
         lambda_ = self.lambda_

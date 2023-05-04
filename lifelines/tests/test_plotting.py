@@ -280,7 +280,11 @@ class TestPlotting:
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(coef_penalizer=0.1, fit_intercept=False)
         aaf.fit(X, "T", "E")
-        ax = aaf.smoothed_hazards_(1).iloc[0 : aaf.cumulative_hazards_.shape[0] - 500].plot()
+        ax = (
+            aaf.smoothed_hazards_(1)
+            .iloc[: aaf.cumulative_hazards_.shape[0] - 500]
+            .plot()
+        )
         ax.set_xlabel("time")
         ax.set_title("test_aalen_additive_smoothed_plot")
         self.plt.show(block=block)

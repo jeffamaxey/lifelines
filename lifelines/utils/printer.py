@@ -59,7 +59,7 @@ class Printer:
             columns = summary_df.columns
         else:
             columns = summary_df.columns & self.columns
-        return summary_df[columns].to_latex(float_format="%." + str(self.decimals) + "f")
+        return summary_df[columns].to_latex(float_format=f"%.{str(self.decimals)}f")
 
     def html_print(self):
         print(self.to_html())
@@ -107,7 +107,7 @@ class Printer:
 
         repr_string += repr(self.model) + "\n"
         for string, value in self.headers:
-            repr_string += "{} = {}".format(justify(string), value) + "\n"
+            repr_string += f"{justify(string)} = {value}" + "\n"
 
         repr_string += "\n" + "---" + "\n"
 
@@ -171,7 +171,7 @@ class Printer:
 
             repr_string += "\n" + "---" + "\n"
             for string, value in self.footers:
-                repr_string += "{} = {}".format(string, value) + "\n"
+                repr_string += f"{string} = {value}" + "\n"
         return repr_string
 
     def ascii_print(self):

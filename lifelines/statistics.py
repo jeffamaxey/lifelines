@@ -125,10 +125,7 @@ class StatisticalResult:
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         summary_df = self.summary
 
-        headers = []
-        for k, v in extra_kwargs.items():
-            headers.append((k, v))
-
+        headers = list(extra_kwargs.items())
         header_df = pd.DataFrame.from_records(headers).set_index(0)
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
 
@@ -180,13 +177,9 @@ class StatisticalResult:
         return s
 
     def _stringify_meta_data(self, dictionary):
-        longest_key = max([len(k) for k in dictionary])
+        longest_key = max(len(k) for k in dictionary)
         justify = string_rjustify(longest_key)
-        s = ""
-        for k, v in dictionary.items():
-            s += "{} = {}\n".format(justify(k), v)
-
-        return s
+        return "".join(f"{justify(k)} = {v}\n" for k, v in dictionary.items())
 
     def __add__(self, other):
         """useful for aggregating results easily"""
@@ -674,7 +667,7 @@ def difference_of_restricted_mean_survival_time_test(model1, model2, t):
 
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, weights=None, t_0=-1, weightings=None, **kwargs
-) -> StatisticalResult:  # pylint: disable=too-many-locals
+) -> StatisticalResult:    # pylint: disable=too-many-locals
     r"""
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
     be equal when n=2):
@@ -801,18 +794,16 @@ def multivariate_logrank_test(
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Peto")
         w_i = np.cumprod(1.0 - (ev_i.sum(1)) / (n_i + 1))  # Peto-Peto's modified survival estimates.
     elif weightings == "fleming-harrington":
-        if "p" in kwargs:
-            p = kwargs["p"]
-            if p < 0:
-                raise ValueError("p must be non-negative.")
-        else:
+        if "p" not in kwargs:
             raise ValueError("Must provide keyword argument p for Flemington-Harrington test statistic")
-        if "q" in kwargs:
-            q = kwargs["q"]
-            if q < 0:
-                raise ValueError("q must be non-negative.")
-        else:
+        p = kwargs["p"]
+        if p < 0:
+            raise ValueError("p must be non-negative.")
+        if "q" not in kwargs:
             raise ValueError("Must provide keyword argument q for Flemington-Harrington test statistic")
+        q = kwargs["q"]
+        if q < 0:
+            raise ValueError("q must be non-negative.")
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Flemington-Harrington")
         kmf = KaplanMeierFitter().fit(event_durations, event_observed=event_observed)
         s = kmf.survival_function_.to_numpy().flatten()[:-1]  # Left-continuous Kaplan-Meier survival estimate.
@@ -847,8 +838,7 @@ def multivariate_logrank_test(
 
 
 def _chisq_test_p_value(U, degrees_freedom) -> float:
-    p_value = stats.chi2.sf(U, degrees_freedom)
-    return p_value
+    return stats.chi2.sf(U, degrees_freedom)
 
 
 class TimeTransformers:

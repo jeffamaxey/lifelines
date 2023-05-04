@@ -100,7 +100,7 @@ def _concordance_ratio(num_correct: int, num_tied: int, num_pairs: int) -> float
     return (num_correct + num_tied / 2) / num_pairs
 
 
-def _concordance_summary_statistics(event_times, predicted_event_times, event_observed):  # pylint: disable=too-many-locals
+def _concordance_summary_statistics(event_times, predicted_event_times, event_observed):    # pylint: disable=too-many-locals
     """Find the concordance index in n * log(n) time.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
@@ -172,7 +172,7 @@ def _concordance_summary_statistics(event_times, predicted_event_times, event_ob
         if has_more_censored and (not has_more_died or died_truth[died_ix] > censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = _handle_pairs(censored_truth, censored_pred, censored_ix, times_to_compare)
             censored_ix = next_ix
-        elif has_more_died and (not has_more_censored or died_truth[died_ix] <= censored_truth[censored_ix]):
+        elif has_more_died:
             pairs, correct, tied, next_ix = _handle_pairs(died_truth, died_pred, died_ix, times_to_compare)
             for pred in died_pred[died_ix:next_ix]:
                 times_to_compare.insert(pred)
@@ -228,9 +228,7 @@ def _naive_concordance_summary_statistics(event_times, predicted_event_times, ev
             return True
         if event_a and time_a < time_b:
             return True
-        if event_b and time_b < time_a:
-            return True
-        return False
+        return bool(event_b and time_b < time_a)
 
     def _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
         if pred_a == pred_b:

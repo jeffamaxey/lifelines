@@ -84,5 +84,5 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
         times = times.reshape((n, 1))
         bp = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bp, (n, 1)), times)
-        M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
+        M = np.hstack([M[:, (0, )], np.diff(M, axis=1)])
         return np.dot(M, 1 / params)

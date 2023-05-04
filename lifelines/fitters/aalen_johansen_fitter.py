@@ -76,7 +76,7 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         alpha=None,
         ci_labels=None,
         weights=None,
-    ):  # pylint: disable=too-many-arguments,too-many-locals
+    ):    # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters
         ----------
@@ -104,10 +104,9 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         self : AalenJohansenFitter
           self, with new properties like ``cumulative_incidence_``.
         """
-        # Checking for tied event times
-        ties = self._check_for_duplicates(durations=durations, events=event_observed)
-
-        if ties:
+        if ties := self._check_for_duplicates(
+            durations=durations, events=event_observed
+        ):
             warnings.warn(
                 dedent(
                     """Tied event times were detected. The Aalen-Johansen estimator cannot handle tied event times.
@@ -123,8 +122,8 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
 
         # Creating label for event of interest & indicator for that event
         event_of_interest = int(event_of_interest)
-        cmprisk_label = "CIF_" + str(event_of_interest)
-        self.label_cmprisk = "observed_" + str(event_of_interest)
+        cmprisk_label = f"CIF_{event_of_interest}"
+        self.label_cmprisk = f"observed_{event_of_interest}"
 
         # Fitting Kaplan-Meier for either event of interest OR competing risk
         km = KaplanMeierFitter().fit(durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights)

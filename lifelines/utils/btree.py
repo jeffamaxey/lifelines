@@ -77,7 +77,9 @@ class _BTree:
                 i = 2 * i + 2
             else:
                 return
-        raise ValueError("Value %s not contained in tree." "Also, the counts are now messed up." % value)
+        raise ValueError(
+            f"Value {value} not contained in tree.Also, the counts are now messed up."
+        )
 
     def __len__(self):
         return self._counts[0]
@@ -97,12 +99,11 @@ class _BTree:
                 rank += self._counts[i]
                 # subtract off the right tree if exists
                 nexti = 2 * i + 2
-                if nexti < n:
-                    rank -= self._counts[nexti]
-                    i = nexti
-                    continue
-                else:
+                if nexti >= n:
                     return (rank, count)
+                rank -= self._counts[nexti]
+                i = nexti
+                continue
             else:  # value == cur
                 count = self._counts[i]
                 lefti = 2 * i + 1
